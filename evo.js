@@ -3,15 +3,15 @@ NOTES
 - currently multiple blobs can occupy the same tile. change in populate() func.
 */
 //world properties
-const worldSize = 10;
+const worldSize = 30;
 
-const dayLength = 10;
+const dayLength = 100;
 const startingPopulation = 10; //must be < (4*worldSize - 4)
 const foodAmount = 10; //must be < (worldSize-2)^2
 const childVariation = 0.1; //10%
 const defaults = {
     speed: 1,
-    sense: 2,
+    sense: 1,
     persistence: 8
 }
 const tickLength = 1000; //milliseconds
@@ -94,7 +94,8 @@ const Blob = function() {
             dirY = y(searchIndex);
 
             for (let i = 0; i < 8; i++) { //mirror to other 7 eigths
-                /* Instead of 3 nested for loops, use 0,1,..,7 in binary with switch on bits
+                /* 
+                   Instead of 3 nested for loops, use 0,1,..,7 in binary with switch on bits
                    bit 0: switch sgn(x)
                    bit 1: switch sgn(y)
                    bit 2: switch (x,y)
@@ -120,7 +121,9 @@ const Blob = function() {
                 
                 if (world[future.y] !== undefined &&
                     world[future.y][future.x] !== undefined &&
-                    world[future.y][future.x].contains === "food" ) {
+                    world[future.y][future.x].contains === "food"
+                    // && world[future.y][future.x].marked === false 
+                    ) {
                     prospects.push(intended)
                 }
 
@@ -151,7 +154,8 @@ const Blob = function() {
                 world[future.y] === undefined ||
                 world[future.y][future.x] === undefined ||
                 world[future.y][future.x].contains !== "nothing"
-            )
+                //|| world[future.y][future.x].marked === true
+            );
         } else { //potential matches
 
             //find smallest hypotenuse in pospects
@@ -169,26 +173,6 @@ const Blob = function() {
 
         }
 
-        /* OLD
-        //future thing to check : can you += objects?
-        this.vel = {
-            x: dirX,
-            y: dirY
-        }
-
-        //mark tile as taken
-        world[future.y][future.x].contains = "markedLocation";
-        // console.log("marked location")
-        */
-        
-
-        /*
-            IF hypot(vel.x, vel.y) > this.speed:
-                get angle of the velocity vector (A)
-                round magnitude of velocity to this.speed (vMax)
-                vel.x = vMax * cosA, vel.y = vMax * sinA
-                Math.floor() vel.x and vel.y
-        */
         if ( Math.hypot(dirX, dirY) > this.speed) {
             let angle = Math.atan2(dirY, dirX);
             let adjustedMagnitude = this.speed;
@@ -199,6 +183,8 @@ const Blob = function() {
             dirX = adjustedVel.x;
             dirY = adjustedVel.y;
         }
+
+        world[this.pos.y + Math.floor(dirY)][this.pos.x + Math.floor(dirX)].marked = true
         
         return {
             x: Math.floor(dirX),
@@ -208,7 +194,7 @@ const Blob = function() {
     this.move = function() {
         this.vel = this.search();
 
-        //clear marked location
+        //clear current location
         world[this.pos.y][this.pos.x].contains = "nothing";
 
         //update position
@@ -220,6 +206,7 @@ const Blob = function() {
         */
 
         world[this.pos.y][this.pos.x].contains = "blob";
+        world[this.pos.y][this.pos.x].marked = false;
         
         //reset velocity
         this.vel.x = 0;
@@ -333,7 +320,8 @@ const initWorld = function() {
                 pos: {
                     x: j,
                     y: i
-                }
+                },
+                marked: false
             };
             world[i][j].contains = "nothing";
         }
@@ -342,7 +330,7 @@ const initWorld = function() {
 }
 
 const display = function() {
-    const type = tile => tiles[tile.contains].sprite;
+    const type = tile => { tile.contains === "blob" ? null : tiles[tile.contains].sprite};
 
     //console.log((world.map(x=>x.map(y=>type(y)).join('')).join("\n")))
     let printWorld = [];
